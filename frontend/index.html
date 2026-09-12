@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Schema-Driven Dashboard Platform</title>
+<style>
+  :root {
+    --bg: #f4f5f7; --panel: #ffffff; --ink: #14171c; --muted: #5c6470;
+    --line: #dfe3e8; --accent: #1652a0; --accent-ink: #ffffff;
+    --ok-bg: #e7f4ec; --ok-ink: #17603a; --err-bg: #fdecec; --err-ink: #98211d;
+    --code-bg: #f0f2f5; --radius: 8px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14171c; --panel: #1c2028; --ink: #e9ecf1; --muted: #9aa3b0;
+      --line: #2c323d; --accent: #63a0ea; --accent-ink: #10131a;
+      --ok-bg: #16301f; --ok-ink: #8fd6ab; --err-bg: #341b1b; --err-ink: #f0a5a2;
+      --code-bg: #232833;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px; background: var(--bg); color: var(--ink);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  header { max-width: 1180px; margin: 0 auto 20px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  header p { margin: 0; color: var(--muted); font-size: 14px; }
+  main {
+    max-width: 1180px; margin: 0 auto; display: grid; gap: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(430px, 1fr));
+  }
+  section {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 18px;
+  }
+  section h2 { font-size: 15px; margin: 0 0 14px; letter-spacing: .01em; }
+  section h2 span { color: var(--muted); font-weight: 400; }
+  label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  input, select, textarea, button {
+    font: inherit; color: inherit; border-radius: 6px; border: 1px solid var(--line);
+    background: var(--panel); padding: 7px 9px;
+  }
+  input, select, textarea { width: 100%; }
+  textarea { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; min-height: 90px; }
+  button {
+    background: var(--accent); color: var(--accent-ink); border: none;
+    padding: 8px 14px; cursor: pointer; font-weight: 600;
+  }
+  button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--line); font-weight: 500; }
+  button:hover { filter: brightness(1.08); }
+  .row { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px; }
+  .row > * { flex: 1 1 120px; }
+  .row > .fixed { flex: 0 0 auto; }
+  .actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .builder { border: 1px dashed var(--line); border-radius: 6px; padding: 10px; margin-bottom: 10px; }
+  .builder:empty { display: none; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 8px; background: var(--code-bg);
+    border-radius: 999px; padding: 4px 6px 4px 12px; font-size: 13px; margin: 0 6px 6px 0;
+  }
+  .chip button { background: none; color: var(--muted); padding: 0 6px; font-size: 15px; line-height: 1; }
+  .checks { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+  .checks label { display: flex; align-items: center; gap: 6px; color: var(--ink); font-size: 14px; margin: 0; }
+  .checks input { width: auto; }
+  .status { margin-top: 12px; font-size: 13px; border-radius: 6px; padding: 10px 12px; display: none; }
+  .status.show { display: block; }
+  .status.ok { background: var(--ok-bg); color: var(--ok-ink); }
+  .status.err { background: var(--err-bg); color: var(--err-ink); }
+  .status code { font-weight: 700; }
+  .status ul { margin: 6px 0 0; padding-left: 18px; }
+  .cards { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
+  .card {
+    flex: 1 1 150px; background: var(--code-bg); border-radius: var(--radius);
+    padding: 12px 14px;
+  }
+  .card .k { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .card .v { font-size: 24px; font-weight: 700; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .empty { color: var(--muted); font-style: italic; padding: 10px 0; }
+  .null { color: var(--muted); }
+  .hint { font-size: 12px; color: var(--muted); margin: -4px 0 10px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Schema-Driven Dashboard Platform</h1>
+  <p>Register a schema, ingest rows against it, configure a dashboard, read it back. All state is in memory.</p>
+</header>
+
+<main>
+  <!-- 1. Schema -->
+  <section>
+    <h2>1. Register schema <span>POST /schema</span></h2>
+    <div class="row">
+      <div><label for="schema-name">Schema name</label><input id="schema-name" placeholder="trade"></div>
+    </div>
+    <div id="field-builder" class="builder"></div>
+    <div class="actions">
+      <button class="secondary" id="add-field">Add field</button>
+      <button id="submit-schema">Register schema</button>
+    </div>
+    <div class="status" id="schema-status"></div>
+  </section>
+
+  <!-- 2. Ingest -->
+  <section>
+    <h2>2. Ingest data <span>POST /ingest</span></h2>
+    <div class="row">
+      <div><label for="ingest-schema">Schema</label><select id="ingest-schema"></select></div>
+    </div>
+    <div id="ingest-form" class="builder"></div>
+    <div class="actions"><button id="submit-row">Ingest this row</button></div>
+    <p class="hint" style="margin-top:14px">Or paste a batch — ingestion is atomic, so one bad row rejects all of them.</p>
+    <textarea id="ingest-json" spellcheck="false" placeholder='[{"tradeId": "T001", "amount": 1000}]'></textarea>
+    <div class="actions"><button class="secondary" id="submit-json">Ingest JSON batch</button></div>
+    <div class="status" id="ingest-status"></div>
+  </section>
+
+  <!-- 3. Dashboard config -->
+  <section>
+    <h2>3. Configure dashboard <span>POST /dashboard</span></h2>
+    <div class="row">
+      <div><label for="dash-name">Dashboard name</label><input id="dash-name" placeholder="trade-dashboard"></div>
+      <div><label for="dash-schema">Schema</label><select id="dash-schema"></select></div>
+    </div>
+    <div class="row">
+      <div><label for="view-field">Summary field</label><select id="view-field"></select></div>
+      <div><label for="view-agg">Aggregation</label>
+        <select id="view-agg">
+          <option>sum</option><option>avg</option><option>min</option>
+          <option>max</option><option>count</option>
+        </select>
+      </div>
+      <div class="fixed"><button class="secondary" id="add-summary">Add summary</button></div>
+    </div>
+    <label>Table columns</label>
+    <div class="checks" id="column-checks"></div>
+    <div class="actions" style="margin-top:0"><button class="secondary" id="add-table">Add table view</button></div>
+    <div id="view-list" style="margin-top:12px"></div>
+    <div class="actions"><button id="submit-dashboard">Register dashboard</button></div>
+    <div class="status" id="dash-status"></div>
+  </section>
+
+  <!-- 4. Render -->
+  <section>
+    <h2>4. Dashboard data <span>GET /dashboard/{name}</span></h2>
+    <div class="row">
+      <div><label for="view-dash">Dashboard</label><select id="view-dash"></select></div>
+      <div class="fixed"><button id="load-dash">Load</button></div>
+    </div>
+    <div id="dash-output"></div>
+    <div class="status" id="view-status"></div>
+  </section>
+</main>
+
+<script>
+"use strict";
+
+const $ = (id) => document.getElementById(id);
+const el = (tag, props = {}, kids = []) => {
+  const node = Object.assign(document.createElement(tag), props);
+  for (const kid of [].concat(kids)) node.append(kid);
+  return node;
+};
+
+/* ---------------------------------------------------------------- API --- */
+
+async function api(method, path, body) {
+  const response = await fetch(path, {
+    method,
+    headers: body === undefined ? {} : { "content-type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  let payload = null;
+  try { payload = await response.json(); } catch { /* empty body */ }
+  if (!response.ok) {
+    const error = (payload && payload.error) || { code: "HTTP_" + response.status, message: response.statusText, details: [] };
+    throw Object.assign(new Error(error.message), { api: error, status: response.status });
+  }
+  return payload;
+}
+
+function report(node, message, error) {
+  node.className = "status show " + (error ? "err" : "ok");
+  node.replaceChildren();
+  if (!error) { node.append(message); return; }
+  const info = error.api || { code: "NETWORK_ERROR", message: error.message, details: [] };
+  node.append(el("div", {}, [el("code", { textContent: info.code }), " " + info.message]));
+  if (info.details && info.details.length) {
+    node.append(el("ul", {}, info.details.map((detail) => {
+      const where = [
+        detail.row !== undefined ? "row " + detail.row : null,
+        detail.view !== undefined ? "view " + detail.view : null,
+        detail.field !== undefined ? "'" + detail.field + "'" : null,
+      ].filter(Boolean).join(" ");
+      return el("li", { textContent: where ? where + " — " + detail.issue : detail.issue });
+    })));
+  }
+}
+
+/* ------------------------------------------------------------- state ---- */
+
+let schemas = [];
+const schemaByName = (name) => schemas.find((schema) => schema.name === name);
+
+async function refreshSchemas(selectName) {
+  schemas = (await api("GET", "/schemas")).schemas;
+  for (const [select, keep] of [[$("ingest-schema"), selectName], [$("dash-schema"), selectName]]) {
+    const previous = keep || select.value;
+    select.replaceChildren(...schemas.map((schema) => el("option", { value: schema.name, textContent: schema.name })));
+    if (schemas.some((schema) => schema.name === previous)) select.value = previous;
+    select.dispatchEvent(new Event("change"));
+  }
+}
+
+async function refreshDashboards(selectName) {
+  const { dashboards } = await api("GET", "/dashboards");
+  const select = $("view-dash");
+  const previous = selectName || select.value;
+  select.replaceChildren(...dashboards.map((config) =>
+    el("option", { value: config.name, textContent: config.name + "  (" + config.schema + ")" })));
+  if (dashboards.some((config) => config.name === previous)) select.value = previous;
+}
+
+/* ------------------------------------------------- 1. schema builder ---- */
+
+function addFieldRow(values = {}) {
+  const name = el("input", { placeholder: "fieldName", value: values.name || "" });
+  const type = el("select", {}, ["string", "number", "boolean"].map((option) =>
+    el("option", { textContent: option, selected: option === values.type })));
+  const aggregation = el("select", {}, ["", "sum", "avg", "min", "max", "count"].map((option) =>
+    el("option", { value: option, textContent: option || "no metadata" })));
+  const required = el("input", { type: "checkbox", checked: !!values.required });
+  const remove = el("button", { className: "secondary fixed", textContent: "✕", type: "button" });
+
+  const row = el("div", { className: "row" }, [
+    el("div", {}, [el("label", { textContent: "Name" }), name]),
+    el("div", {}, [el("label", { textContent: "Type" }), type]),
+    el("div", {}, [el("label", { textContent: "Aggregation metadata" }), aggregation]),
+    el("div", { className: "fixed" }, [el("label", { textContent: "Required" }),
+      el("div", { className: "checks" }, [el("label", {}, [required])])]),
+    remove,
+  ]);
+  row.getField = () => {
+    const field = { name: name.value.trim(), type: type.value, required: required.checked };
+    if (aggregation.value) field.aggregation = aggregation.value;
+    return field;
+  };
+  remove.onclick = () => row.remove();
+  $("field-builder").append(row);
+}
+
+$("add-field").onclick = () => addFieldRow();
+
+$("submit-schema").onclick = async () => {
+  const fields = [...$("field-builder").children].map((row) => row.getField()).filter((field) => field.name);
+  try {
+    const created = await api("POST", "/schema", { name: $("schema-name").value.trim(), fields });
+    report($("schema-status"), `Registered '${created.name}' with ${created.fields.length} field(s).`);
+    await refreshSchemas(created.name);
+  } catch (error) {
+    report($("schema-status"), null, error);
+  }
+};
+
+/* --------------------------------------------------- 2. ingest form ---- */
+
+function buildIngestForm() {
+  const schema = schemaByName($("ingest-schema").value);
+  const form = $("ingest-form");
+  form.replaceChildren();
+  if (!schema) return;
+  for (const field of schema.fields) {
+    let input;
+    if (field.type === "boolean") {
+      input = el("select", {}, [
+        el("option", { value: "", textContent: "— omit —" }),
+        el("option", { value: "true", textContent: "true" }),
+        el("option", { value: "false", textContent: "false" }),
+      ]);
+    } else {
+      input = el("input", { type: field.type === "number" ? "number" : "text", step: "any" });
+    }
+    input.dataset.name = field.name;
+    input.dataset.type = field.type;
+    form.append(el("div", { className: "row" }, [
+      el("div", {}, [
+        el("label", { textContent: `${field.name} · ${field.type}${field.required ? " · required" : ""}` }),
+        input,
+      ]),
+    ]));
+  }
+}
+
+function collectRow() {
+  const row = {};
+  for (const input of $("ingest-form").querySelectorAll("[data-name]")) {
+    const raw = input.value.trim();
+    if (raw === "") continue;               // omitted, never sent as null
+    if (input.dataset.type === "number") row[input.dataset.name] = Number(raw);
+    else if (input.dataset.type === "boolean") row[input.dataset.name] = raw === "true";
+    else row[input.dataset.name] = raw;
+  }
+  return row;
+}
+
+async function ingest(rows) {
+  try {
+    const result = await api("POST", "/ingest", { schema: $("ingest-schema").value, rows });
+    report($("ingest-status"), `Ingested ${result.ingested} row(s); ${result.totalRows} stored for '${result.schema}'.`);
+  } catch (error) {
+    report($("ingest-status"), null, error);
+  }
+}
+
+$("ingest-schema").onchange = buildIngestForm;
+$("submit-row").onclick = () => ingest([collectRow()]);
+$("submit-json").onclick = () => {
+  let rows;
+  try {
+    rows = JSON.parse($("ingest-json").value);
+  } catch (error) {
+    report($("ingest-status"), null, { message: "That is not valid JSON: " + error.message });
+    return;
+  }
+  ingest(Array.isArray(rows) ? rows : [rows]);
+};
+
+/* ----------------------------------------------- 3. dashboard config ---- */
+
+let views = [];
+
+function renderViewList() {
+  const list = $("view-list");
+  list.replaceChildren();
+  if (!views.length) {
+    list.append(el("p", { className: "hint", textContent: "No views yet — add a summary or a table." }));
+    return;
+  }
+  views.forEach((view, index) => {
+    const label = view.type === "summary"
+      ? `summary · ${view.aggregation}${view.field ? " of " + view.field : " of all rows"}`
+      : `table · ${view.columns.join(", ")}`;
+    const remove = el("button", { textContent: "✕", type: "button" });
+    remove.onclick = () => { views.splice(index, 1); renderViewList(); };
+    list.append(el("span", { className: "chip" }, [label, remove]));
+  });
+}
+
+function buildFieldPickers() {
+  const schema = schemaByName($("dash-schema").value);
+  const fieldSelect = $("view-field");
+  fieldSelect.replaceChildren(el("option", { value: "", textContent: "— all rows (count only) —" }));
+  const checks = $("column-checks");
+  checks.replaceChildren();
+  if (!schema) return;
+  for (const field of schema.fields) {
+    fieldSelect.append(el("option", { value: field.name, textContent: `${field.name} (${field.type})` }));
+    checks.append(el("label", {}, [el("input", { type: "checkbox", value: field.name }), field.name]));
+  }
+}
+
+$("dash-schema").onchange = () => { views = []; renderViewList(); buildFieldPickers(); };
+
+$("add-summary").onclick = () => {
+  const view = { type: "summary", aggregation: $("view-agg").value };
+  if ($("view-field").value) view.field = $("view-field").value;
+  views.push(view);
+  renderViewList();
+};
+
+$("add-table").onclick = () => {
+  const columns = [...$("column-checks").querySelectorAll("input:checked")].map((box) => box.value);
+  views.push({ type: "table", columns });
+  renderViewList();
+};
+
+$("submit-dashboard").onclick = async () => {
+  try {
+    const created = await api("POST", "/dashboard", {
+      name: $("dash-name").value.trim(),
+      schema: $("dash-schema").value,
+      views,
+    });
+    report($("dash-status"), `Registered '${created.name}' with ${created.views.length} view(s).`);
+    views = [];
+    renderViewList();
+    await refreshDashboards(created.name);
+  } catch (error) {
+    report($("dash-status"), null, error);
+  }
+};
+
+/* ---------------------------------------------------- 4. render data ---- */
+
+const show = (value) =>
+  value === null || value === undefined
+    ? el("span", { className: "null", textContent: "—" })
+    : String(value);
+
+function renderDashboard(data) {
+  const output = $("dash-output");
+  output.replaceChildren();
+
+  const cards = data.views.filter((view) => view.type === "summary");
+  if (cards.length) {
+    output.append(el("div", { className: "cards" }, cards.map((view) =>
+      el("div", { className: "card" }, [
+        el("div", { className: "k", textContent: `${view.aggregation} · ${view.field || "all rows"}` }),
+        el("div", { className: "v" }, [show(view.value)]),
+      ]))));
+  }
+
+  for (const view of data.views.filter((v) => v.type === "table")) {
+    const head = el("tr", {}, view.columns.map((column) =>
+      el("th", { textContent: `${column.name}` })));
+    const body = view.rows.map((row) => el("tr", {}, view.columns.map((column) =>
+      el("td", { className: column.type === "number" ? "num" : "" }, [show(row[column.name])]))));
+    output.append(el("div", { className: "scroll" }, [el("table", {}, [el("thead", {}, [head]), el("tbody", {}, body)])]));
+    if (!view.rows.length) output.append(el("p", { className: "empty", textContent: "No rows ingested yet." }));
+  }
+
+  output.append(el("p", { className: "hint", textContent: `${data.rowCount} row(s) in schema '${data.schema}'.` }));
+}
+
+$("load-dash").onclick = async () => {
+  const name = $("view-dash").value;
+  if (!name) { report($("view-status"), null, { message: "Register a dashboard first." }); return; }
+  try {
+    renderDashboard(await api("GET", "/dashboard/" + encodeURIComponent(name)));
+    $("view-status").className = "status";
+  } catch (error) {
+    $("dash-output").replaceChildren();
+    report($("view-status"), null, error);
+  }
+};
+
+/* --------------------------------------------------------- start up ---- */
+
+addFieldRow({ name: "", type: "string", required: true });
+renderViewList();
+refreshSchemas().then(refreshDashboards).catch(() => {});
+</script>
+</body>
+</html>

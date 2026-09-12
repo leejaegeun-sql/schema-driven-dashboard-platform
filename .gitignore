@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+cleanenv/
+
+# Browser / verification artifacts (screenshots kept locally, not packaged;
+# add a documentation image deliberately with `git add -f` if one is ever wanted)
+*.png
+*.jpg
+*.jpeg
+*.pdf
+screenshots/
+chrome-profile*/
+.chrome-user-data/
+
+# Editors / OS
+.idea/
+.vscode/
+.DS_Store

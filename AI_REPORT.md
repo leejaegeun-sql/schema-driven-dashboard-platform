@@ -7,16 +7,16 @@ documentation; **headless Chrome over the DevTools Protocol** to verify the UI.
 
 ## Example prompts
 
-1. *"Read round_1_assignment.pdf completely. Do not create or edit any files
+1. _"Read round_1_assignment.pdf completely. Do not create or edit any files
    yet. List the mandatory requirements, deliverables, evaluation criteria and
    the ambiguities needing an explicit assumption — how a dashboard is
    associated with a schema, whether ingestion is atomic, duplicate
    registration, empty datasets, error-response consistency. Stop after the
-   analysis."*
-2. *"Use 422 rather than 400 for semantically invalid but readable requests;
+   analysis."_
+2. _"Use 422 rather than 400 for semantically invalid but readable requests;
    keep 409 for duplicate names, 404 for missing references; override
-   RequestValidationError so pydantic errors use the same envelope."*
-3. *"Cover every agreed positive and negative behaviour."*
+   RequestValidationError so pydantic errors use the same envelope."_
+3. _"Cover every agreed positive and negative behaviour."_
 
 Settling the ambiguities before writing code kept the implementation from
 drifting.
@@ -42,16 +42,14 @@ replaced its `400` for validation failures with `422`.
 
 ## How I validated the solution
 
-* **184 pytest tests** with warnings treated as errors: type checking
+- **184 pytest tests** with warnings treated as errors: type checking
   (including the `bool`-is-not-a-`number` trap), unknown and null fields, atomic
   rollback, the 404/409/422 paths, view validation, the empty-dataset contract.
-* **Registry tests** failing if a declared view type or aggregation is left
+- **Registry tests** failing if a declared view type or aggregation is left
   unimplemented.
-* **A live curl walkthrough** running the trade and customer use cases on one
+- **A live curl walkthrough** running the trade and customer use cases on one
   process, and **the real UI in headless Chrome**, scripted through all four
   steps with zero console errors.
-* **Clean virtual environments** built from `requirements.txt` alone. A
+- **Clean virtual environments** built from `requirements.txt` alone. A
   dependency-compatibility trial moved the project onto the current FastAPI
   stack and removed one of its two warning filters.
-
-I read every line the model produced.

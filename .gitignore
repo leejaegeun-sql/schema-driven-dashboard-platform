@@ -23,6 +23,14 @@ screenshots/
 chrome-profile*/
 .chrome-user-data/
 
+# Personal application material: CV, Q&A answers, the assignment brief.
+# Never part of the submission -- the directory is ignored wholesale so a new
+# file dropped in it cannot be committed by accident.
+application_docs/
+
+# Built submission archive
+*.zip
+
 # Editors / OS
 .idea/
 .vscode/

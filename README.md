@@ -46,14 +46,38 @@ one, so the Schema dropdowns in panels 2 and 3 stay empty until a schema exists.
 
 **A 60-second first run:**
 
-1. **Register schema** — name `trade`; fields `tradeId`/string/required,
-   `amount`/number/required, `status`/string. Wait for the green confirmation.
-2. **Ingest data** — pick `trade`, paste into the batch box:
-   `[{"tradeId":"T001","amount":1000,"status":"OPEN"},{"tradeId":"T002","amount":1500}]`
-3. **Configure dashboard** — name `trade-dashboard`, schema `trade`; add a
-   summary of `amount` with `sum`; tick all three columns and add the table view.
-4. **Dashboard data** — pick `trade-dashboard` and click Load: **2500**, and a
-   table where T002's status shows `—` because it was never supplied.
+**1. Register schema.** Set *Schema name* to `trade`, then fill three field
+rows — *Add field* creates each new one:
+
+| Name | Type | Aggregation metadata | Required |
+| --- | --- | --- | --- |
+| `tradeId` | `string` | no metadata | ☑ |
+| `amount` | `number` | `sum` | ☑ |
+| `status` | `string` | no metadata | ☐ |
+
+Click **Register schema** and wait for the green *"Registered 'trade' with 3
+field(s)."* The aggregation metadata is descriptive: it records how `amount` is
+typically consumed, and a dashboard must still state its own aggregation.
+
+**2. Ingest data.** The *Schema* dropdown now offers `trade`, and the form
+builds itself from those fields. Paste into the batch box and click **Ingest
+JSON batch**:
+
+```json
+[{"tradeId":"T001","amount":1000,"status":"OPEN"},{"tradeId":"T002","amount":1500}]
+```
+
+Expect *"Ingested 2 row(s); 2 stored for 'trade'."* T002 omits `status`
+deliberately.
+
+**3. Configure dashboard.** *Dashboard name* `trade-dashboard`, *Schema*
+`trade`. Set *Summary field* to `amount` and *Aggregation* to `sum`, then click
+**Add summary**. Under *Table columns* tick `tradeId`, `amount` and `status`,
+then click **Add table view**. Two chips appear; click **Register dashboard**.
+
+**4. Dashboard data.** Choose `trade-dashboard` and click **Load**. Expect a
+summary card reading **2500** and a table whose T002 row shows `—` under
+`status`, because that field was never supplied.
 
 Prefer the terminal? [Two use cases, one backend](#two-use-cases-one-backend)
 is the same walkthrough as runnable `curl` commands.

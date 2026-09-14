@@ -40,6 +40,21 @@ Then open <http://localhost:8000/> and work through the four panels in order:
 | <http://localhost:8000/> | The UI (register schemas, ingest, configure, view) |
 | <http://localhost:8000/docs> | Interactive OpenAPI documentation |
 
+Each panel feeds the next — that is the data model, not a UI quirk: rows are
+validated against a registered schema, and a dashboard is configured against
+one, so the Schema dropdowns in panels 2 and 3 stay empty until a schema exists.
+
+**A 60-second first run:**
+
+1. **Register schema** — name `trade`; fields `tradeId`/string/required,
+   `amount`/number/required, `status`/string. Wait for the green confirmation.
+2. **Ingest data** — pick `trade`, paste into the batch box:
+   `[{"tradeId":"T001","amount":1000,"status":"OPEN"},{"tradeId":"T002","amount":1500}]`
+3. **Configure dashboard** — name `trade-dashboard`, schema `trade`; add a
+   summary of `amount` with `sum`; tick all three columns and add the table view.
+4. **Dashboard data** — pick `trade-dashboard` and click Load: **2500**, and a
+   table where T002's status shows `—` because it was never supplied.
+
 Prefer the terminal? [Two use cases, one backend](#two-use-cases-one-backend)
 is the same walkthrough as runnable `curl` commands.
 
